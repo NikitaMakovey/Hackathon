@@ -1,97 +1,112 @@
-import React, {useEffect, useState} from 'react'
+import { track } from "@amplitude/analytics-browser";
+import * as dayjs from "dayjs";
+import React, { useEffect, useState } from "react";
+import Card from "../components/Card";
+import CardPopup from "../components/CardPopup";
+import Filters from "../components/Filters";
+import getHash from "../functions/getHash";
 import "../styles/css/Home.css";
-import Card from '../components/Card';
-import Filters from '../components/Filters';
-import {useNavigate} from "react-router-dom";
 
+export default function Home({ showFilters, openFilters = (f) => f }) {
+  const hash = getHash();
+  const [popupId, setPopupId] = useState(hash);
 
-export default function Home({showFilters}) {
-    // eslint-disable-next-line no-sequences
-    const getQueryParams = () => window.location.search
-        .replace('?', '')
-        .split('&')
-        .map(item => {
-            const data = item.split('=');
-            if (data.length && data[0] === 'hash') {
-                return {hash: data[1]}
-            }
-            return {};
-        });
+  const [requests, setRequests] = useState([]);
+  const fetchRequests = (query = "") => {
+    fetch(process.env.REACT_APP_API_PREFIX + `/requests${query}`)
+      .then((response) => response.json())
+      .then((data) => {
+        setRequests(data);
+        setLoading(false);
+        console.log(data);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+    useEffect(fetchRequests, []);
 
-    const queryData = getQueryParams();
+    const [loading, setLoading] = useState(true);
+    if (requests.length > 0 && loading) {
+      setLoading(false);
+    }
 
-    const hash = queryData.length && Object.keys(queryData[0]).includes('hash') ? queryData[0]['hash'] : null;
-
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        if (hash) {
-            console.log(hash);
-            navigate(`/requests/${hash}`)
-        }
-    }, [hash, navigate])
-
-    const [requests, setRequests] = useState([]);
+    const [filtrationParams, setFiltrationParams] = useState({
+      from: null,
+      to: null,
+      dateFrom: null,
+      dateTo: null,
+    });
 
     useEffect(() => {
-        fetch(process.env.REACT_APP_API_PREFIX + "/api/requests")
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                setRequests(data);
-            })
-            .catch(error => {
-                console.error(error);
-            })
-    }, []);
+      if (Object.values(filtrationParams).filter((param) => !!param).length) {
+        track("Update filters", filtrationParams);
+      }
 
-    useEffect(() => {
-        setCards(requests);
-    }, [requests])
+      setLoading(true);
+      setRequests([]);
+      let filters = [];
+      if (filtrationParams.from) {
+        filters.push(
+          `from${filtrationParams.from.type}=${filtrationParams.from.value}`
+        );
+      }
+      if (filtrationParams.to) {
+        filters.push(
+          `to${filtrationParams.to.type}=${filtrationParams.to.value}`
+        );
+      }
+      if (filtrationParams.dateFrom) {
+        const date = dayjs(filtrationParams.dateFrom).format("YYYY-MM-DD");
+        filters.push(`dateFrom=${date}`);
+      }
+      if (filtrationParams.dateTo) {
+        const date = dayjs(filtrationParams.dateTo).format("YYYY-MM-DD");
+        filters.push(`dateTo=${date}`);
+      }
+      const query = "?" + filters.join("&");
+      fetchRequests(query);
+    }, [filtrationParams]);
 
-    //array of cards that will be displayed after filtration
-    const [cards, setCards] = useState([...requests])
-
-    const [filtrationParams, setFiltrationParams] = useState(
-        {
-            'from': null,
-            'to': null,
-            'dateFrom': null,
-            'dateTo': null,
-            "isRewardable": null
-        });
-
-
-    useEffect(() => {
-        let allArray = requests;
-        let fil = filtrationParams;
-        let newArray = allArray.filter(function (el) {
-            return ((el.from === fil.from) || fil.from === null)  &&
-                   ((el.to === fil.to) || fil.to === null) &&
-                   ((el.dateFrom === fil.dateFrom) || fil.dateFrom === null) &&
-                   ((el.dateTo === fil.dateTo) || fil.dateTo === null) &&
-                   ((el.isRewardable === fil.isRewardable) || fil.isRewardable === null);
-          });
-        setCards(newArray)        
-    }, [filtrationParams, requests])
-    
-
-  return (
-    <div className='home-main'>
-        <div className='home-container'>
-            <Filters active = {showFilters} setFiltrationParams = {setFiltrationParams}/>
-           
-            {showFilters ? '' : 
-                <div className='cards-container'>
-                    {cards.length === 0 ? 
-                        <div><span>Unfortunately, there are no results for your query. 
-                                Try changing the filters
-                        </span></div> 
-                     : cards.map((request, key) => (
-                        <Card key={key} {...request}/>
-                    ))}
-                </div>} 
+    return (
+      <div className="home-main">
+        <div className="home-container">
+          <Filters
+            active={showFilters}
+            setFiltrationParams={setFiltrationParams}
+            filters={filtrationParams}
+            openFilters={openFilters}
+          />
+          {showFilters ? (
+            ""
+          ) : (
+            <div className="cards-container">
+              {popupId && (
+                <CardPopup
+                  request={
+                    requests.filter((obj) => {
+                      return obj.guid === popupId;
+                    })[0]
+                  }
+                  setPopupId={setPopupId}
+                />
+              )}
+              {loading && <div className="lds-dual-ring"></div>}
+              {requests.length === 0 && !loading ? (
+                <div>
+                  <span>
+                    Unfortunately, there are no results for your query. Try
+                    changing the filters
+                  </span>
+                </div>
+              ) : (
+                requests.map((request, key) => (
+                  <Card key={key} {...request} setPopupId={setPopupId} />
+                ))
+              )}
+            </div>
+          )}
         </div>
-    </div>
-  )
+      </div>
+    );
+  };
 }

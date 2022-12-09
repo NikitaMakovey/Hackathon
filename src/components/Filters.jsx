@@ -1,105 +1,106 @@
-import React, {useState, forwardRef} from 'react'
+import React, { useState } from 'react'
 import "../styles/css/Filters.css"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css";
-import * as dayjs from "dayjs";
+import Input from './Input.jsx';
 
-export default function Filters({ setFiltrationParams = f => f, active }) {
-//styling, ignore it
-    function buttonStyle(e) {
-        e.preventDefault();
-        // activeLink = document.querySelector("button.active");
-        if (document.querySelector("button.active")) {
-            document.querySelector("button.active").classList.remove('active')
+export default function Filters({ setFiltrationParams = f => f, active, filters, openFilters = f => f}) {
+
+    const [fromDate, setFromDate] = useState(null);
+    const [toDate, setToDate] = useState(null);
+
+    function setFilters(name, newValue) {
+        if (newValue === '') {
+            newValue = null;
         }
-        e.target.classList.add('active')
+        setFiltrationParams(prevState => {
+            let obj = prevState;
+            obj[name] = newValue;
+            return {...obj};
+         })
+        }
+    
+    function clearFilter(id, setDatepicker = false) {
+        if (setDatepicker) {
+            setDatepicker(null);
+        }
+        document.querySelector(`#${id}`).value = ''; 
+        
+        setFilters(id, null)
     }
-
-    //datepickers
-    const [fromDate, setFromDate] = useState(new Date());
-    const [toDate, setToDate] = useState(new Date());
-    const ExampleCustomInput = forwardRef(({ value, onClick }, ref) => (
-        <button className="filters-field" onClick={(e)=> 
-            {e.preventDefault(); onClick()}} ref={ref}> 
-            {value}
-        </button>
-      ));
-
-      const destinations = ['Almaty', 'Antalya', 'Bali', 'Bangkok', 'Europe', 'Kas', 'Kazan', 
-                            'Krasnodar', 'Minsk', 'Moscow', 'Novosibirsk', 'Pangan', 'Rostov-on-Don', 
-                            'Russia', 'Seoul', 'Sheremetyevo', 'St.Petersburg', 'Sydney', 'Thailand', 
-                            'Turkey', 'Warsaw', 'Yekaterinburg']
-
-
-  //filtration
-function setFilters(name, newValue) {
-    //stringify the dates
-    if (newValue !== null && typeof(newValue) === 'object') {
-        newValue = dayjs(newValue).format('DD-MM-YYYY');
-        console.log(newValue);
-    }
-    setFiltrationParams(prevState => {
-        let obj = prevState;
-        obj[name] = newValue;
-        return {...obj};
-     })
-    }
-
+    
   return (
     <div className={active? 'filters-main-mobile': `filters-main`}>
         {active? '' : <span className='filters-title'>Filters</span>}
         <form className='filters-form'>
-            <label className='filters-label' htmlFor="from">From</label>
-            <select required 
-                onChange={(e)=> setFilters(e.target.id, e.target.value)} 
-                className='filters-field filters-input' id="from">
-                    <option value="" disabled selected hidden>Select</option>
-                    {destinations.map(item => <option>{item}</option>)}
-            </select>
 
-            <label className='filters-label' htmlFor="to">To</label>
-            <select required 
-                onChange={(e)=> setFilters(e.target.id, e.target.value)} 
-                className='filters-field filters-input' id="to">
-                    <option value="" disabled selected hidden>Select</option>
-                    {destinations.map(item=> <option>{item}</option>)}
-            </select>
+            <label className='filters-label' htmlFor="from">Откуда</label>
+            <Input id = 'from'
+                   setFilters={setFilters}
+                   clearFilter = {clearFilter}
+                   filters = {filters}
+             />
 
-            <label className='filters-label' htmlFor="departure">Departure date</label>
-            <DatePicker
-                id='dateFrom'
-                selected={fromDate}
-                value={fromDate}
-                dateFormat="dd-MM-yyyy"
-                onChange={(date) => {setFromDate(date); setFilters('dateFrom', date)}}
-                customInput={<ExampleCustomInput />}
-            />
+            <label className='filters-label' htmlFor="to">Куда</label>
+            <Input id = 'to'
+                   setFilters={setFilters}
+                   clearFilter = {clearFilter}
+                   filters = {filters}
+             />
 
-            <label className='filters-label' htmlFor="arrival">Arrival date</label>
-            <DatePicker
-                selected={toDate}
-                dateFormat="dd-MM-yyyy"
-                onChange={(date) => {setToDate(date); setFilters('dateTo', date)}}
-                customInput={<ExampleCustomInput />}
-            />
-
-            <label className='filters-label' htmlFor="weight">Size of delivarable</label>
-            <select required className='filters-field' id="weight">
-                <option value="" disabled selected hidden>Select</option>
-                <option>Up to 1kg</option>
-                <option>2kg</option>
-                <option>Large</option>
-            </select>
-
-            <label className='filters-label' for="reward">Reward</label>
-            <div className='reward-choice-container'>
-                <button onClick={(e)=>{buttonStyle(e); setFilters('isRewardable', true)}} 
-                        className='reward-filter-btn reward-filter-btn-left '>Yes</button>
-                <button onClick={(e)=>{buttonStyle(e); setFilters('isRewardable', false)}} 
-                        className='reward-filter-btn'>No</button>
-                <button onClick={(e)=>{buttonStyle(e); setFilters('isRewardable', null)}} 
-                        className='reward-filter-btn reward-filter-btn-right' >N/A</button>
+            <label className='filters-label' htmlFor="departure">Отправление</label>
+            <div className='filters-input-container'>
+                <DatePicker
+                    id='dateFrom'
+                    selected={fromDate}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText={'Выбрать дату'}
+                    onChange={(date) => {setFromDate(date); setFilters('dateFrom', date)}}
+                    className='filters-field'
+                />
+                {filters.dateFrom && 
+                <button type = 'button' onClick={()=>clearFilter('dateFrom', setFromDate)}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" 
+                         d="M11.25 1.8075L10.1925 0.75L6 4.9425L1.8075 0.75L0.75
+                         1.8075L4.9425 6L0.75 10.1925L1.8075 11.25L6 7.0575L10.1925
+                         11.25L11.25 10.1925L7.0575 6L11.25 1.8075Z" fill="#6C6F80"/>
+                    </svg>
+                </button>
+                }
             </div>
+
+            <label className='filters-label' htmlFor="arrival">Прибытие</label>
+            <div className='filters-input-container'>
+                <DatePicker
+                    id='dateTo'
+                    selected= {toDate}
+                    placeholderText={'Выбрать дату'}
+                    dateFormat="dd-MM-yyyy"
+                    onChange={(date) => {setToDate(date); setFilters('dateTo', date);}}
+                    className='filters-field'
+                />
+                {filters.dateTo && 
+                <button type = 'button' onClick={()=>clearFilter('dateTo', setToDate)}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" 
+                        d="M11.25 1.8075L10.1925 0.75L6 4.9425L1.8075 0.75L0.75 
+                        1.8075L4.9425 6L0.75 10.1925L1.8075 11.25L6 7.0575L10.1925 
+                        11.25L11.25 10.1925L7.0575 6L11.25 1.8075Z" fill="#6C6F80"/>
+                    </svg>
+                </button>
+                }
+            </div>
+
+            <div className='filters-btn-container'>
+                <button type='button' onClick={()=> {clearFilter('from'); clearFilter('to'); 
+                                                    clearFilter('dateFrom', setFromDate); 
+                                                    clearFilter('dateTo', setToDate)}}
+                    className='clear-filters-btn'>Очистить фильтры
+                </button>
+                <button type='button' onClick={openFilters} className='apply-filters-btn'>Показать</button>
+            </div> 
+            
         </form>
     </div>
   )
